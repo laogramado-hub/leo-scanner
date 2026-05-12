@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Léo Guia — Scanner de Ônibus</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #f0ece4;
+    --muted: #888;
+    --accent: #e8c547;
+    --nacional: #f5c842;
+    --internacional: #f07d3a;
+    --mice: #e05480;
+    --estudantil: #9b6fd4;
+    --azul: #4a9eda;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .container { max-width: 540px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Upload area */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1e1c14; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .upload-zone h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .upload-zone p { font-size: 0.8rem; color: var(--muted); }
+
+  /* Preview */
+  #preview-wrap { display: none; margin-bottom: 1.5rem; }
+  #preview-wrap img { width: 100%; border-radius: 12px; max-height: 240px; object-fit: cover; display: block; }
+
+  /* Status */
+  .status {
+    display: none;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+    font-weight: 500;
+  }
+  .status.loading { background: #1a1a0a; border: 1px solid #4a4010; color: var(--accent); }
+  .status.success { background: #0a1a0a; border: 1px solid #1a4a1a; color: #6dd46d; }
+  .status.error { background: #1a0a0a; border: 1px solid #4a1a1a; color: #e06060; }
+
+  /* Form */
+  #form-section { display: none; }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .field { margin-bottom: 0.75rem; }
+  .field label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .field input, .field textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 64px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  /* Origem buttons */
+  .origem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .origem-btn {
+    padding: 0.6rem 0.5rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .origem-btn .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .origem-btn.active { color: var(--text); }
+  .origem-btn[data-v="Nacional"].active { border-color: var(--nacional); background: #2a2210; color: var(--nacional); }
+  .origem-btn[data-v="Internacional"].active { border-color: var(--internacional); background: #2a1a0a; color: var(--internacional); }
+  .origem-btn[data-v="MICE"].active { border-color: var(--mice); background: #2a0e18; color: var(--mice); }
+  .origem-btn[data-v="Estudantil"].active { border-color: var(--estudantil); background: #1e1428; color: var(--estudantil); }
+  .origem-btn[data-v="Pendente"].active { border-color: var(--azul); background: #0e1e2a; color: var(--azul); }
+
+  /* Save button */
+  .btn-save {
+    width: 100%;
+    padding: 0.9rem;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: opacity 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .btn-save:hover { opacity: 0.88; }
+  .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-nova {
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    transition: all 0.15s;
+  }
+  .btn-nova:hover { border-color: var(--muted); color: var(--text); }
+
+  /* Records */
+  #records-section { margin-top: 2rem; }
+  .records-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .records-header h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .record-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    transition: border-color 0.15s;
+  }
+  .record-card:hover { border-color: #444; }
+  .record-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .record-info { flex: 1; min-width: 0; }
+  .record-info strong { display: block; font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .record-info span { font-size: 0.75rem; color: var(--muted); }
+  .record-origem { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+
+  /* Config panel */
+  #config-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  #config-panel h3 { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); }
+  .config-field { margin-bottom: 0.75rem; }
+  .config-field label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .config-field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .btn-config-save {
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+
+  .config-toggle {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid transparent;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sheets-note {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+  .sheets-note a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚌 Léo Guia — Scanner</h1>
+  <button class="config-toggle" onclick="toggleConfig()">⚙ configurar</button>
+</header>
+
+<div class="container">
+
+  <!-- Config Panel -->
+  <div id="config-panel">
+    <h3>Configuração inicial</h3>
+    <div class="config-field">
+      <label>Chave Gemini API</label>
+      <input type="password" id="cfg-apikey" placeholder="AIza...">
+    </div>
+    <div class="config-field">
+      <label>ID da planilha Google Sheets</label>
+      <input type="text" id="cfg-sheetid" placeholder="Cole o ID da URL da planilha">
+    </div>
+    <p class="sheets-note">O ID está na URL da planilha:<br><code style="color:var(--accent)">docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</code></p>
+    <br>
+    <button class="btn-config-save" onclick="saveConfig()">Salvar configuração</button>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" accept="image/*" capture="environment" id="file-input" onchange="handleFile(event)">
+    <div class="upload-icon">📷</div>
+    <h2>Fotografar traseira do ônibus</h2>
+    <p>Toca aqui para abrir a câmera ou galeria</p>
+  </div>
+
+  <!-- Preview -->
+  <div id="preview-wrap">
+    <img id="preview-img" src="" alt="Foto do ônibus">
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status"></div>
+
+  <!-- Form -->
+  <div id="form-section">
+    <p class="section-label">Dados do veículo</p>
+    <div class="field">
+      <label>Empresa</label>
+      <input type="text" id="f-empresa" placeholder="Nome da empresa">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Veículo nº</label>
+        <input type="text" id="f-veiculo" placeholder="Número">
+      </div>
+      <div class="field">
+        <label>Placa</label>
+        <input type="text" id="f-placa" placeholder="Placa">
+      </div>
+    </div>
+    <div class="field">
+      <label>Telefone / WhatsApp</label>
+      <input type="text" id="f-tel" placeholder="Número de contato">
+    </div>
+
+    <p class="section-label">Tripulação</p>
+    <div class="field">
+      <label>Dono do grupo</label>
+      <input type="text" id="f-dono" placeholder="Quem decide — guia emissivo, motorista...">
+    </div>
+    <div class="field">
+      <label>Tripulação completa</label>
+      <input type="text" id="f-tripulacao" placeholder="Outros nomes se houver">
+    </div>
+
+    <p class="section-label">Origem do grupo</p>
+    <div class="origem-grid">
+      <button class="origem-btn" data-v="Nacional" onclick="selectOrigem(this)">
+        <span class="dot" style="background:var(--nacional)"></span> Nacional
+      </button>
+      <button class="origem-btn" data-v="Internacional" onclick="selectOrigem(this)">
+        <span class="dot" style="background:var(--internacional)"></span> Internacional
+      </button>
+      <button class="origem-btn" data-v="MICE" onclick="selectOrigem(this)">
+        <span class="dot" style="background:var(--mice)"></span> MICE
+      </button>
+      <button class="origem-btn" data-v="Estudantil" onclick="selectOrigem(this)">
+        <span class="dot" style="background:var(--estudantil)"></span> Estudantil
+      </button>
+      <button class="origem-btn" data-v="Pendente" onclick="selectOrigem(this)" style="grid-column: span 2;">
+        <span class="dot" style="background:var(--azul)"></span> Pendente (definir depois)
+      </button>
+    </div>
+
+    <p class="section-label">Observações</p>
+    <div class="field">
+      <textarea id="f-obs" placeholder="DD, HD, informações extras..."></textarea>
+    </div>
+
+    <button class="btn-save" id="btn-save" onclick="saveRecord()">Salvar registro</button>
+    <button class="btn-nova" onclick="novaFoto()">+ Nova foto</button>
+
+    <p class="sheets-note" style="margin-top:1rem;">
+      Os registros são salvos localmente e podem ser exportados.<br>
+      Para salvar no Google Sheets, configure o ID da planilha acima.
+    </p>
+  </div>
+
+  <!-- Records -->
+  <div id="records-section" style="display:none">
+    <div class="records-header">
+      <h3>Registros</h3>
+      <span class="badge" id="records-count">0</span>
+    </div>
+    <div id="records-list"></div>
+    <button class="btn-nova" onclick="exportCSV()" style="margin-top:0.5rem;">↓ Exportar CSV</button>
+  </div>
+
+</div>
+
+<script>
+const GEMINI_KEY = 'AIzaSyCtrFVljxo_aMZjUtwCEpqGy2G6BkZ7ckg';
+let selectedOrigem = '';
+let records = JSON.parse(localStorage.getItem('leo-records') || '[]');
+let cfg = JSON.parse(localStorage.getItem('leo-cfg') || '{}');
+
+const origemColors = {
+  Nacional: '#f5c842',
+  Internacional: '#f07d3a',
+  MICE: '#e05480',
+  Estudantil: '#9b6fd4',
+  Pendente: '#4a9eda'
+};
+
+function toggleConfig() {
+  const p = document.getElementById('config-panel');
+  p.style.display = p.style.display === 'block' ? 'none' : 'block';
+  if (p.style.display === 'block') {
+    document.getElementById('cfg-apikey').value = cfg.apikey || GEMINI_KEY;
+    document.getElementById('cfg-sheetid').value = cfg.sheetid || '';
+  }
+}
+
+function saveConfig() {
+  cfg.apikey = document.getElementById('cfg-apikey').value.trim();
+  cfg.sheetid = document.getElementById('cfg-sheetid').value.trim();
+  localStorage.setItem('leo-cfg', JSON.stringify(cfg));
+  document.getElementById('config-panel').style.display = 'none';
+  showStatus('Configuração salva!', 'success');
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.style.display = 'block';
+  el.className = 'status ' + type;
+  el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${msg}` : msg;
+}
+
+function hideStatus() {
+  document.getElementById('status').style.display = 'none';
+}
+
+function selectOrigem(btn) {
+  selectedOrigem = btn.dataset.v;
+  document.querySelectorAll('.origem-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result;
+    document.getElementById('preview-img').src = base64;
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('form-section').style.display = 'block';
+    showStatus('Lendo a imagem com Gemini...', 'loading');
+    await analyzeWithGemini(base64);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeWithGemini(base64) {
+  try {
+    const apiKey = cfg.apikey || GEMINI_KEY;
+    const base64Data = base64.split(',')[1];
+    const mimeType = base64.split(';')[0].split(':')[1];
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: { mime_type: mimeType, data: base64Data }
+              },
+              {
+                text: `Esta é uma foto da traseira de um ônibus de turismo no Brasil. Extraia as informações visíveis e responda SOMENTE em JSON válido, sem texto antes ou depois, sem markdown:
+{
+  "empresa": "nome da empresa de transporte",
+  "veiculo": "número de identificação do veículo",
+  "placa": "placa do veículo",
+  "telefone": "telefone ou whatsapp visível",
+  "observacoes": "outras informações como bandeiras de países, ANTT, estado de origem, carroceria"
+}
+Se alguma informação não estiver visível, use string vazia "".`
+              }
+            ]
+          }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    document.getElementById('f-empresa').value = parsed.empresa || '';
+    document.getElementById('f-veiculo').value = parsed.veiculo || '';
+    document.getElementById('f-placa').value = parsed.placa || '';
+    document.getElementById('f-tel').value = parsed.telefone || '';
+    document.getElementById('f-obs').value = parsed.observacoes || '';
+
+    showStatus('✓ Dados extraídos! Confira e complete.', 'success');
+    setTimeout(hideStatus, 3000);
+
+  } catch (err) {
+    showStatus('Não consegui ler automaticamente. Preencha manualmente.', 'error');
+  }
+}
+
+function saveRecord() {
+  const record = {
+    data: new Date().toLocaleDateString('pt-BR'),
+    empresa: document.getElementById('f-empresa').value,
+    veiculo: document.getElementById('f-veiculo').value,
+    placa: document.getElementById('f-placa').value,
+    telefone: document.getElementById('f-tel').value,
+    dono: document.getElementById('f-dono').value,
+    tripulacao: document.getElementById('f-tripulacao').value,
+    origem: selectedOrigem || 'Pendente',
+    observacoes: document.getElementById('f-obs').value
+  };
+
+  records.unshift(record);
+  localStorage.setItem('leo-records', JSON.stringify(records));
+  renderRecords();
+  showStatus('✓ Registro salvo!', 'success');
+  setTimeout(() => { hideStatus(); novaFoto(); }, 1500);
+}
+
+function novaFoto() {
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('f-empresa').value = '';
+  document.getElementById('f-veiculo').value = '';
+  document.getElementById('f-placa').value = '';
+  document.getElementById('f-tel').value = '';
+  document.getElementById('f-dono').value = '';
+  document.getElementById('f-tripulacao').value = '';
+  document.getElementById('f-obs').value = '';
+  selectedOrigem = '';
+  document.querySelectorAll('.origem-btn').forEach(b => b.classList.remove('active'));
+  hideStatus();
+}
+
+function renderRecords() {
+  if (records.length === 0) return;
+  document.getElementById('records-section').style.display = 'block';
+  document.getElementById('records-count').textContent = records.length;
+  document.getElementById('records-list').innerHTML = records.map(r => `
+    <div class="record-card">
+      <div class="record-dot" style="background:${origemColors[r.origem] || '#888'}"></div>
+      <div class="record-info">
+        <strong>${r.empresa || 'Sem nome'} ${r.veiculo}</strong>
+        <span>${r.placa} · ${r.data}${r.dono ? ' · ' + r.dono : ''}</span>
+      </div>
+      <span class="record-origem">${r.origem}</span>
+    </div>
+  `).join('');
+}
+
+function exportCSV() {
+  const headers = ['Data','Empresa','Veiculo','Placa','Telefone','Dono_Grupo','Tripulacao','Origem','Observacoes'];
+  const rows = records.map(r => [
+    r.data, r.empresa, r.veiculo, r.placa, r.telefone, r.dono, r.tripulacao, r.origem, r.observacoes
+  ].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `leo-guia-registros-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// Init
+renderRecords();
+if (!cfg.apikey && !GEMINI_KEY) toggleConfig();
+</script>
+</body>
+</html>
